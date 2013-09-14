@@ -1,0 +1,5 @@
+config.py
+*.pyc
+*.log
+*.db
+*.egg-info
