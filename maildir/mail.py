@@ -11,7 +11,7 @@ import sqlite3
 import logging
 
 
-__all__ = ['SSLEmail']
+__all__ = ['SSLEmail', 'IMAP4_MESSAGE']
 
 
 class IMAP4_MESSAGE:
@@ -31,17 +31,17 @@ class SSLEmail(object):
         :param host unicode
         :param port integer: port of connect to
         """
-        self.db = "mail_backup.db"
-        self.logger_name = "mail_backup"
-        self.logger = logging.getLogger(self.logger_name)
-        self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('mail_backup.log')
-        fh.setLevel(logging.INFO)
-        frmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(frmt)
-        self.logger.addHandler(fh)
         for key in config:
             setattr(self, key, config[key])
+        self.logger_name = "mail_backup_%s" % self.service
+        self.logger = logging.getLogger(self.logger_name)
+        self.logger.setLevel(logging.DEBUG)
+        self.fh = logging.FileHandler('mail_backup_%s.log' % self.service)
+        self.fh.setLevel(logging.INFO)
+        frmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.fh.setFormatter(frmt)
+        self.logger.addHandler(self.fh)
+        self.db = "mail_backup_%s.db" % self.service
         self.port = 993 or self.port
         self.certfile = None or self.certfile if hasattr(self, 'certfile') else None
         self.keyfile = None or self.keyfile if hasattr(self, 'keyfile') else None
@@ -65,10 +65,13 @@ class SSLEmail(object):
         con = sqlite3.connect(self.db)
         with con:
             cur = con.cursor()
-            cur.execute("select id from Mail where id=:id", {"id": mail_id})
-            if cur.fetchone():
+            try:
+                cur.execute("select id from Mail where id=:id", {"id": mail_id})
+                if cur.fetchone():
+                    return True
+                return False
+            except sqlite3.ProgrammingError:
                 return True
-            return False
 
     def add_to_mail_table(self, mail_id):
         con = sqlite3.connect(self.db)
@@ -78,16 +81,17 @@ class SSLEmail(object):
             self.logger.info("inserted %s " % mail_id)
             con.commit()
 
-    def create_directories(self):
-        if self.path.endswith(os.path.sep):
-            path = self.path + self.username
+    def create_directories(self, path=None, dirs=None):
+        path = path or self.path
+        if path.endswith(os.path.sep):
+            path = path + self.username
         else:
-            path = self.path + os.path.sep + self.username
+            path = path + os.path.sep + self.username
         self.path = path
         if not os.path.exists(path):
             os.mkdir(path)
             self.logger.info("directory %s created" % path)
-        for directory in self.dirs:
+        for directory in dirs or self.dirs:
             p = path + os.path.sep + directory
             if not os.path.exists(p):
                 os.mkdir(p)
@@ -107,6 +111,7 @@ class SSLEmail(object):
         """
         flags, delimiter, mailbox_name = self.list_response_pattern.match(line).groups()
         mailbox_name = mailbox_name.strip('"')
+        self.logger.info("%s selected" % (mailbox_name))
         return (flags, delimiter, mailbox_name)
 
     def fetch_lists(self):
@@ -117,6 +122,7 @@ class SSLEmail(object):
         self.mailboxes = []
         for l in self.raw_lists[1]:
             r = self.extract_mail_box(l)
+            self.logger.info("list: %s selected" % (r[-1]))
             self.mailboxes.append(r[-1])
 
     def select_mailbox(self, mailbox, readyonly=True):
@@ -153,11 +159,11 @@ class SSLEmail(object):
                 return msg
         return None
 
-    def save_to_disk(self, msg):
+    def save_to_disk(self, msg, path=None):
         """
         If service is local create maildir
         """
-        mdir = mailbox.Maildir(self.path)
+        mdir = mailbox.Maildir(path or self.path)
         m = mailbox.MaildirMessage(msg)
         #m.set_payload()
         params = msg.get_params()
@@ -181,10 +187,10 @@ class SSLEmail(object):
                     attachments[k] = part.get_payload(decode=True)
         return attachments
 
-    def store_attachment(self, name, content):
+    def store_attachment(self, name, content, path=None):
         name = name[0:100]
         if not self.mail_exists(name):
-            with open(os.path.join(self.path, u'attachments', u'attachments-' + name), 'wb') as f:
+            with open(os.path.join(path or self.path, u'attachments', u'attachments-' + name), 'wb') as f:
                 f.write(content)
                 self.add_to_mail_table(name)
                 self.logger.info("attachment saved %s" % name)
