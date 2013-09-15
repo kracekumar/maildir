@@ -181,6 +181,7 @@ class SSLEmail(object):
         return attachments
 
     def store_attachment(self, name, content):
+        name = name[0:100]
         if not self.mail_exists(name):
             with open(os.path.join(self.path, u'attachments', u'attachments-' + name), 'wb') as f:
                 f.write(content)
