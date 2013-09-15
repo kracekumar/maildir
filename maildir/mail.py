@@ -175,7 +175,7 @@ class SSLEmail(object):
         attachments = {}
         for part in msg.walk():
             if part.get('Content-Disposition'):
-                k = part.get('X-Attachment-Id') + "-" + part.get('Content-Disposition')
+                k = part.get('X-Attachment-Id', 'X-') + "-" + part.get('Content-Disposition')
                 if not k in attachments:
                     attachments[k] = part.get_payload(decode=True)
         return attachments
