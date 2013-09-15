@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import datetime
 from time import sleep
 import os
 import re
@@ -55,7 +56,7 @@ class SSLEmail(object):
         with con:
             cur = con.cursor()
             try:
-                cur.execute("create table Mail(id UnicodeText)")
+                cur.execute("create table Mail(id UnicodeText, created_at DateTime)")
                 self.logger.info("Mail table created")
             except sqlite3.OperationalError:
                 pass
@@ -73,7 +74,7 @@ class SSLEmail(object):
         con = sqlite3.connect(self.db)
         with con:
             cur = con.cursor()
-            cur.execute("""insert into Mail(id) values(:id)""", {"id": mail_id})
+            cur.execute("""insert into Mail(id, created_at) values(:id, :datetime)""", {"id": mail_id, "datetime": datetime.datetime.now()})
             self.logger.info("inserted %s " % mail_id)
             con.commit()
 
