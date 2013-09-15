@@ -55,7 +55,7 @@ class SSLEmail(object):
         with con:
             cur = con.cursor()
             try:
-                cur.execute("create table Mail(id Text)")
+                cur.execute("create table Mail(id UnicodeText)")
                 self.logger.info("Mail table created")
             except sqlite3.OperationalError:
                 pass
@@ -207,7 +207,7 @@ class SSLEmail(object):
                     #Get Message ids
                     ids = r[1][0].split()
                     for mail_id in ids:
-                        msg = self.fetch(mail_id)
+                        msg = self.fetch(mail_id[:100])
                         #Store Email body
                         if msg and self.service:
                             self.save_to_disk(msg)

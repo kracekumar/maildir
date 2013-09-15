@@ -22,14 +22,8 @@ def read_sample_config(filename='sample-config.py'):
 
 def valid_config(config):
     for item in config.config:
-        if not ('username' in item and 'password' in item and 'host' in item):
-            if 'service' in item:
-                if item['service'] == 'local':
-                    pass
-                elif item['service'].lower() in ['dropbox']:
-                    pass
-                else:
-                    return False
+        if not ('username' in item and 'password' in item and 'host' in item and 'service' in item and 'path' in item):
+            return False
     return True
 
 
