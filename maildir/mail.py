@@ -74,7 +74,7 @@ class SSLEmail(object):
         con = sqlite3.connect(self.db)
         with con:
             cur = con.cursor()
-            cur.execute("""insert into Mail(id, created_at) values(:id, :datetime)""", {"id": mail_id, "datetime": datetime.datetime.now()})
+            cur.execute("""insert into Mail(id, created_at) values(:id, :datetime)""", {"id": unicode(mail_id), "datetime": datetime.datetime.now()})
             self.logger.info("inserted %s " % mail_id)
             con.commit()
 
